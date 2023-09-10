@@ -6,6 +6,7 @@ from enum import Enum
 import math
 
 pyautogui.PAUSE = 0
+pyautogui.FAILSAFE = False
 
 INDEX = 0
 MIDDLE = 1
@@ -99,10 +100,6 @@ def start_detection():
   mp_drawing = mp.solutions.drawing_utils
   gesture = None
 
-  countdown = None
-
-  scroll_prev_y = 0
-
   while True:
     ret, frame = vid.read()
     if not ret:
@@ -127,7 +124,7 @@ def start_detection():
         gesture = Gesture.FIST
       elif count == 5:
         gesture == Gesture.OPEN
-      elif raised_fingers[INDEX] and count == 1:
+      elif (raised_fingers[INDEX] and raised_fingers[THUMB] and count == 2) or (raised_fingers[INDEX] and count == 1):
         gesture = Gesture.POINT
       elif raised_fingers[INDEX] and raised_fingers[MIDDLE] and count == 2:
         gesture = Gesture.SCROLL
@@ -142,14 +139,14 @@ def start_detection():
       mouse_y = int(screen_height * y)
 
       if gesture == Gesture.POINT:
-        circle_fingers(frame, [finger_positions[INDEX]])
+        circle_fingers(frame, [finger_positions[INDEX], finger_positions[THUMB]])
         pyautogui.moveTo(mouse_x, mouse_y)
+        if calculate_displacement(finger_positions[INDEX].points[TIP], finger_positions[THUMB].points[TIP]) < 2:
+          pyautogui.leftClick()
       elif gesture == Gesture.SCROLL:
         circle_fingers(frame, [finger_positions[INDEX], finger_positions[MIDDLE]])
         speed = (finger_positions[INDEX].points[TIP].y - finger_positions[INDEX].points[PIP].y)*100
         pyautogui.scroll(int(abs(5*speed)))
-        # if (scroll_prev_y != 0):
-          # pyautogui.scroll(int((y-scroll_prev_y)*1000))
       elif gesture == Gesture.DOWNSCROLL:
         circle_fingers(frame, [finger_positions[INDEX], finger_positions[MIDDLE], finger_positions[THUMB]])
         speed = (finger_positions[INDEX].points[TIP].y - finger_positions[INDEX].points[PIP].y)*100
